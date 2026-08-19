@@ -1,0 +1,67 @@
+Day 1 Phase B student challenge
+
+## Phase B: Student Challenge — Business Question #2 (Co-Location Discrepancy)
+ 
+**The Delta:** The demo answered Business Question #1 (Low Battery
+Alert). Your challenge is to answer **Business Question #2**:
+ 
+> *How many robots are assigned to field operators who are NOT
+> co-located at the same physical facility?*
+ 
+The `Mission` model already links a `robot_id` and an `operator_id`, but
+there's no `Operator` class yet — the original ERD implies operators
+exist (via the foreign key) without spelling out the entity. You'll add
+it.
+ 
+### Requirements
+ 
+1. Create a new module `app/models/operator.py` containing an
+   `Operator` class with `id`, `name`, and `facility_id` attributes,
+   following the same pattern as `Facility` (a `registry` class
+   attribute, a `find_by_id` classmethod, a `__repr__`). Use the same
+   3.10+ typing style shown above: `ClassVar[list["Operator"]]` and
+   `"Operator | None"` as the return type, not `typing.List` /
+   `typing.Optional`.
+2. Register `Operator` in `app/models/__init__.py` so it can be
+   imported as `from app.models import Operator`.
+3. Write a function `find_colocation_discrepancies(missions, robots, operators)`
+   in `scripts/day1_demo.py` that returns every `Mission` where the
+   assigned robot's `facility_id` does not match the assigned operator's
+   `facility_id`.
+4. Update `seed_demo_data()` to create at least two `Operator` instances
+   — one that **is** co-located with its assigned robot's facility, and
+   one that **is not** — so the function has something real to catch.
+5. Add a new section to `main()` that prints each discrepancy in a
+   readable format, e.g.:
+```
+   == Co-Location Discrepancy Report ==
+     Mission 2 (Warehouse Perimeter Patrol): robot at facility 2, operator at facility 1
+```
+ 
+### Constraints
+ 
+- Reuse the existing `find_by_id` pattern already established on
+  `Facility` and `Robot` — don't write a different lookup style for
+  `Operator`.
+- Your function must work with **any** list of missions/robots/operators
+  passed in, not just the seeded demo data (i.e., don't hardcode IDs
+  inside the function itself).
+- Stick to Python 3.10+ syntax throughout — no `typing.Optional`,
+  `typing.List`, or `typing.Union` imports anywhere in your new code.
+### Research Prompts
+ 
+- Look up Python's `enum.Enum` docs and consider: should `Operator`
+  have a `role` field using an Enum? (Not required — just think about
+  where else in this model set an Enum would make sense.)
+- Compare a list comprehension (`[x for x in y if ...]`) to writing the
+  same logic with an explicit `for` loop and `if` — which reads clearer
+  for a 3-way lookup like this one?
+- Skim the `dataclasses` module in the standard library. These classes
+  currently write `__init__` and `__repr__` by hand — a `@dataclass`
+  decorator can generate both automatically. Don't refactor to it yet
+  (we're building OOP muscle memory first), but note how much
+  boilerplate it would remove.
+- Look up PEP 604 (the `X | None` syntax) and PEP 585 (built-in
+  generics like `list[int]` instead of `typing.List[int]`) to see
+  exactly which Python version introduced each — this is the "modern
+  Python" story in two sentences of official documentation.
