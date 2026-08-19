@@ -1,0 +1,133 @@
+# Problem Statement: "RoboPulse" Fleet Command Center
+
+---
+
+## 1. Business Context
+
+**Apex Robotics** is deploying autonomous inspection rovers and aerial drones across industrial facilities worldwide. Currently, telemetry data, maintenance schedules, operator assignments, and mission logs are scattered across local terminal logs and spreadsheet files.
+
+Management cannot easily answer crucial operational questions, making fleet optimization and maintenance planning difficult. As part of a operational modernization initiative, Apex Robotics needs a **centralized, full-stack Command Center** to track robot fleets, manage mission assignments, upload diagnostic reports, and monitor real-time operational health across all global facilities.
+
+---
+
+## 2. Key Business Questions
+
+The new system must allow fleet managers and operators to easily answer the following analytical questions:
+
+* **Low Battery Alert:** *Which active robots are operating below a 20% battery charge across all facilities?*
+* **Co-Location Discrepancy:** *How many robots are assigned to field operators who are NOT co-located at the same physical facility?*
+* **Reliability Metrics:** *What is the mission success/failure ratio broken down by robot model?*
+* **Maintenance Flags:** *Which facilities have more than 30% of their fleet currently flagged for hardware maintenance?*
+* **Reporting Lines:** *How many operators reporting to a specific Regional Supervisor have active missions assigned to them?*
+
+---
+
+## 3. Data Architecture & Core Entities
+
+```
++------------------+         +------------------+         +------------------+
+|     Facility     | 1 --- * |      Robot       | 1 --- * |     Mission      |
++------------------+         +------------------+         +------------------+
+| id               |         | id               |         | id               |
+| name             |         | serial_number    |         | title            |
+| location_region  |         | model            |         | priority         |
+| capacity         |         | status           |         | status           |
+| supervisor_id    |         | battery_level    |         | robot_id         |
++------------------+         | facility_id      |         | operator_id      |
+                             +------------------+         +------------------+
+                                                                   | 1
+                                                                   |
+                                                                   * |
+                                                          +------------------+
+                                                          | Diagnostic Log   |
+                                                          +------------------+
+                                                          | id               |
+                                                          | file_url (S3)    |
+                                                          | notes            |
+                                                          | timestamp        |
+                                                          +------------------+
+
+```
+
+### Entity Specifications
+
+1. **Facilities:** Physical sites housing fleets (`id`, `name`, `location_region`, `capacity`, `supervisor_id`).
+2. **Robots:** Individual hardware units (`id`, `serial_number`, `model`, `status`: *Idle* | *In-Mission* | *Maintenance* | *Offline*, `battery_level`, `facility_id`).
+3. **Missions:** Field tasks assigned to robots (`id`, `title`, `priority`: *Low* | *Medium* | *Critical*, `status`: *Pending* | *In-Progress* | *Completed* | *Failed*, `robot_id`, `operator_id`).
+4. **Diagnostic Logs:** Maintenance attachments and telemetry files (`id`, `mission_id`, `file_url`, `notes`, `created_at`).
+
+---
+
+## 4. Technical Requirements & System Features
+
+### A. Role-Based Access Control (RBAC)
+
+The application must secure endpoints and UI components using JWT-based authentication and role authorization:
+
+* **Fleet Admin:** Full CRUD permissions across facilities, robots, missions, and user accounts.
+* **Field Operator:** Can view assigned fleet items, trigger mission status changes, and attach diagnostic logs.
+* **Auditor (Read-Only):** Can view analytics dashboards, inspect data grids, and search system logs without write permissions.
+
+### B. RESTful API & Analytics Layer (FastAPI + PostgreSQL)
+
+* Implement clean REST endpoints following standard HTTP verbs and status codes.
+* Design specific analytical endpoints executing SQL aggregation queries to answer the core business questions.
+* Validate all request payloads and response bodies using **Pydantic v2** models.
+
+### C. Responsive User Interface (React + Material UI)
+
+* Build a clean UI using **Material UI (MUI)** layout components (`Grid`, `Box`, `Card`, `Container`).
+* Utilize **MUI DataGrid** to display fleet and mission listings with support for live sorting, search filtering, and pagination.
+* Provide an interactive dashboard displaying aggregated metric cards and status badges.
+* Manage authentication and global session state using the React Context API.
+
+### D. Cloud File & Document Management (AWS S3)
+
+* Support diagnostic report attachments (images or `.txt`/`.pdf` logs).
+* Upload files directly to an **AWS S3** bucket using Python's `boto3` SDK from the FastAPI backend and store secure media S3 URLs in PostgreSQL.
+
+---
+
+## 5. Technology Stack & Deployment Architecture
+
+| Tier | Required Technology | Deployment Target |
+| --- | --- | --- |
+| **Frontend** | React (Vite) + Material UI (MUI) | **AWS S3** (Static Hosting) + **AWS CloudFront** (CDN) |
+| **Backend** | Python 3.10+ + FastAPI + Pydantic v2 | **AWS Lambda**  |
+| **Database** | PostgreSQL + SQLAlchemy 2.0 | **AWS RDS** (Managed PostgreSQL) |
+| **Storage** | Python `boto3` SDK | **AWS S3** (Private Document Bucket) |
+
+---
+
+## 6. Repository Automation & Helper Scripts
+
+Participants must organize their project repository with standard automation scripts in a `bin/` directory:
+
+```text
+robo-pulse/
+├── backend/            # FastAPI app, SQLAlchemy models, Pydantic schemas
+├── frontend/           # React + Vite + Material UI app
+├── bin/
+│   ├── setup.sh        # Dependency installation & environment initialization
+│   └── seed.sh         # Script to seed PostgreSQL with mock facilities, robots & users
+└── README.md           # Setup and API documentation
+
+```
+
+### Script Requirements
+
+* **`bin/setup.sh`**: Initializes the Python virtual environment (`venv`), installs `requirements.txt` and `npm` packages, and prepares local `.env` files.
+* **`bin/seed.sh`**: Seeds the target database (local or AWS RDS) with realistic initial mock data for testing.
+
+-------------------------------------------------------------------------------------------------
+###Does Not Apply###
+## 7. Deliverables & Day 10 Showcase Expectations
+
+By the conclusion of the workshop, participants must present a working deployment during the Day 10 final showcase.
+
+### Showcase Evaluation Criteria
+
+1. **Live Cloud URL:** Walking through the application hosted live on AWS CloudFront connected to AWS RDS.
+2. **RBAC Walkthrough:** Demonstrating role restrictions (e.g., logging in as a *Fleet Admin* to modify fleet assets vs. an *Operator* uploading an S3 diagnostic log).
+3. **Data Grid & Analytical Dashboard:** Demonstrating live filtering, searching, and accurate metrics addressing the business questions.
+4. **Codebase Architecture Tour:** A brief walk-through of Pydantic validation schemas, FastAPI dependencies (`Depends`), SQLAlchemy database sessions, and MUI state management.
