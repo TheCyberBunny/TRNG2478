@@ -29,6 +29,29 @@ class Mission:
     def mark_failed(self) -> None:
         self.status = MissionStatus.FAILED
 
+        """
+        In-class question answered:
+        The above methods follow the Domain-Driven Design(DDD) architecture.
+        In a future iteration, we may have wanted to have additional functionality happen when the status
+        is updated to certain values. For example, checking that a mission status != Failed and then updating to
+        completed may not be a valid change.
+        Below is a generic parameterized approach:
+        
+        def update_status(self, new_status: MissionStatus) -> None:
+            #need to check that the provided value is a valid status against the enum
+            if not isinstance(new_status, MissionStatus):
+                raise TypeError(f"Expected MissionStatus enum, got {type(new_status).__name__}")
+
+            #if the current and new status is the same, do nothing    
+            if self.status == new_status:
+                return
+            
+            self.status == new_status
+        """
+
+
+
+
     @classmethod
     def find_by_id(cls, mission_id: int) -> "Mission | None":
         for mission in cls.registry:
