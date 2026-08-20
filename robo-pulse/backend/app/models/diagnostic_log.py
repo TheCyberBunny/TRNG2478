@@ -16,10 +16,11 @@ class DiagnosticLog:
         self.mission_id = mission_id
         self.file_url = file_url
         self.notes = notes
+        #Optional[datetime]
         self.created_at = created_at or datetime.now()
         DiagnosticLog.registry.append(self)
 
-    def __repr_(self) -> str:
+    def __repr__(self) -> str:
         return (f"DiagnosticLog(id={self.id}, mission_id={self.mission_id}, "
                 f"file_url={self.file_url!r})")
     
