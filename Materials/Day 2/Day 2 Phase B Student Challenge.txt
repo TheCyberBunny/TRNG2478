@@ -1,0 +1,53 @@
+Day 2 Phase B Student Challenge
+
+## Phase B: Student Challenge — Business Question #2 in SQL (Co-Location Discrepancy)
+ 
+**The Delta:** Day 1's Phase B challenge answered this question in
+plain Python, by hand, looping through in-memory lists. Today's
+challenge answers the *exact same business question*, but as a single
+SQL query against the real database you just built:
+ 
+> *How many robots are assigned to field operators who are NOT
+> co-located at the same physical facility?*
+ 
+### Requirements
+ 
+1. Write a single `SELECT` query in a new file, `db\sql\challenge_query.sql`,
+   that returns every mission where the assigned robot's `facility_id`
+   does not match the assigned operator's `facility_id`.
+2. Your query must return at least these columns: the mission's `id`
+   and `title`, the robot's `facility_id`, and the operator's
+   `facility_id`.
+3. Add a comment above your query (matching the style used throughout
+   `schema.sql`/`seed.sql`/`demo_queries.sql`) explaining **why** each
+   table is joined — not just what the query does, but why that JOIN
+   is necessary to answer the question.
+4. Run it against the seeded data (from the `db\sql` folder in the
+   terminal panel: `psql -U postgres -d robopulse_dev -f
+   challenge_query.sql`) and confirm it returns exactly one row:
+   Mission 2 ("Warehouse Perimeter Patrol").
+### Constraints
+ 
+- Use `JOIN`, not a subquery or `WHERE ... IN (...)` — this challenge
+  is specifically about practicing the JOIN syntax introduced today in
+  `demo_queries.sql` Step 6.
+- You'll need to join **three** tables (`missions`, `robots`,
+  `operators`) — one more than the two-table JOIN shown in the demo.
+- Don't hardcode any specific mission, robot, or operator ID in your
+  `WHERE` clause — the query should work correctly even if the seed
+  data changes.
+### Research Prompts
+ 
+- Compare `JOIN` (shorthand for `INNER JOIN`) to `LEFT JOIN`. What
+  would change about this query's results if a mission's
+  `operator_id` pointed at an operator that didn't exist in the table
+  (a data integrity problem Day 1's Python guarded against with an
+  `if operator is None: continue` check)? Would `INNER JOIN` silently
+  drop that row, or error?
+- Look up how PostgreSQL's `\d <table_name>` meta-command shows you
+  foreign key constraints — useful for quickly recalling which columns
+  join to which without re-opening `schema.sql`.
+- Consider: could this same query be written with the join order
+  reversed (`operators` joined before `robots`)? Would the result
+  change? (It shouldn't — but understanding *why* it shouldn't is the
+  actual lesson here.)

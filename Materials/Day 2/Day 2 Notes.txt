@@ -1,0 +1,351 @@
+Day 2 Notes
+
+# Day 2 — Notes
+## Week 1, Thursday: PostgreSQL and Schemas, PostgreSQL Setup, Data Types & Schemas, Primary & Foreign Keys, CRUD Operations, Joins & Aggregate Queries
+
+---
+
+## Executive Summary
+
+Day 1 built the *shape* of RoboPulse's data — four Python classes,
+living entirely in memory, gone the instant the script ended. Today
+that shape gets a permanent home: a real PostgreSQL database, with the
+exact same fields, but now enforced, persisted, and queryable by more
+than one process at a time. No FastAPI, no SQLAlchemy today — that's
+deliberate. Tomorrow's SQLAlchemy ORM will eventually generate SQL
+statements like the ones you're writing by hand today. Writing them
+yourself first means the ORM never feels like unexplainable magic —
+you'll always know exactly what it's doing underneath.
+
+The throughline from Day 1 continues directly: Business Question #1
+(Low Battery Alert), answered yesterday with a Python list
+comprehension, gets answered again today with a SQL `WHERE` clause —
+same question, same two robots in the result, different engine doing
+the work. Business Question #2 (Co-Location Discrepancy), which you
+solved in Python yesterday with manual `find_by_id()` lookups, becomes
+today's challenge — this time as a `JOIN`, PostgreSQL's native way of
+doing exactly what those manual lookups simulated by hand.
+
+---
+
+## Deep Dive: PostgreSQL Setup
+
+PostgreSQL runs as a persistent background service (on Windows, a
+literal Windows Service you can see in `services.msc` or query with
+`Get-Service`), not something you start and stop the way you activated
+yesterday's Python venv. Once installed, it's running continuously,
+listening on a port (default `5432`), waiting for connections — the
+same way a running FastAPI server will listen for HTTP requests
+starting next week.
+
+Key concepts:
+
+- **Server vs. database.** One PostgreSQL *server* (the Windows
+  Service) can host many separate *databases*. `robopulse_dev` is one
+  database on your machine's server — you could have a dozen other
+  unrelated databases on that same server without them interfering
+  with each other. This is directly analogous to how Day 1's `.venv`
+  isolated one project's Python packages from every other project on
+  the same machine.
+- **Roles (users).** `postgres` is the default superuser role created
+  during installation — it can do anything to any database on the
+  server. Production systems create narrower, purpose-specific roles
+  (a topic that resurfaces when RBAC is introduced in Week 2), but for
+  local development today, the superuser role is the standard
+  starting point.
+- **`psql`.** PostgreSQL's official command-line client. Every command
+  this week that starts with a backslash (`\i`, `\dt`, `\d`, `\q`) is a
+  *psql meta-command* — not SQL itself, just a shortcut built into the
+  client. Plain SQL statements (anything ending in a semicolon) work
+  identically whether typed into `psql`, run from a `.sql` file, or
+  (starting Day 3) sent by SQLAlchemy over a database connection.
+- **Two ways to run a `.sql` file — and why today's demo uses one over
+  the other.** `psql` can run a file two ways: connect interactively
+  (`psql -U postgres -d robopulse_dev`) and then use the `\i filename`
+  meta-command from inside that session, or run it in one shot straight
+  from PowerShell with `psql -U postgres -d robopulse_dev -f
+  filename`. Today's demo deliberately uses the second form
+  (`-f`) for actually *running* `schema.sql`/`seed.sql`/`demo_queries.sql`,
+  reserving the interactive session for brief, ad-hoc exploration
+  (`\dt`, `\d robots`) that gets closed with `\q` right after. Two
+  reasons: `-f` connects, runs, and disconnects automatically, so
+  there's no lingering session to lose track of — and the interactive
+  prompt (`robopulse_dev=#`) is something `psql` *prints*, never
+  something you type; accidentally pasting a line that includes that
+  prompt text alongside a real command sends the prompt text itself as
+  input, which `psql` doesn't recognize as a command. It just starts
+  silently buffering it as the beginning of an incomplete SQL
+  statement — the prompt flips to `robopulse_dev-#` (a dash instead of
+  an equals sign) to show it's still waiting for a `;` that never
+  comes, and everything typed afterward, including a legitimate `\i`,
+  gets absorbed into that stuck buffer instead of running — with no
+  error at all. `-f` sidesteps this failure mode entirely by never
+  putting you at an interactive prompt for the actual file-running
+  steps.
+- **Relative paths resolve against whichever directory the command
+  is actually run from** — not the VS Code workspace root, and not
+  wherever the `.sql` file happens to live. Both `\i` (inside an
+  interactive session) and `-f` (from PowerShell) resolve a bare
+  filename like `schema.sql` against the *current working directory
+  at the moment the command runs* — for `\i`, that's `psql`'s own
+  working directory, inherited from whatever shell launched it; for
+  `-f`, that's PowerShell's current directory. `Get-Location` (or
+  `\! cd` from inside `psql`) is the fastest way to confirm exactly
+  where a command will actually look before running it.
+
+---
+
+## Deep Dive: Data Types & Schemas
+
+A **schema**, in the sense used today, is the structural definition of
+your data — which tables exist, which columns each has, and what type
+of value each column accepts. This is the direct database equivalent
+of what Day 1's Python `__init__` signatures defined implicitly:
+`Robot.__init__(self, robot_id: int, serial_number: str, ...)` told
+Python what shape a `Robot` has; today's `CREATE TABLE robots (...)`
+tells PostgreSQL the exact same thing, but the database now *enforces*
+it, rather than just hinting at it the way Python's optional type
+hints do.
+
+Notable PostgreSQL data types used today:
+
+| PostgreSQL type | Rough Day 1 Python equivalent | Notes |
+|---|---|---|
+| `SERIAL` | — (no direct equivalent) | Auto-incrementing integer; the database generates the value, you never set it directly |
+| `VARCHAR(n)` | `str` | Text capped at `n` characters — PostgreSQL rejects a value longer than that at insert time |
+| `TEXT` | `str` | Like `VARCHAR` but with no length cap; used today for `file_url` since S3 URLs can run long |
+| `INTEGER` | `int` | Whole numbers |
+| `NUMERIC(5,2)` | `float` | Exact decimal with 5 total digits, 2 after the decimal point — used for `battery_level` specifically because floating-point rounding errors are unacceptable for a percentage a dashboard displays |
+| `TIMESTAMP` | `datetime` | Date + time, no timezone attached (a distinction that matters more once RoboPulse spans multiple regions — worth flagging as a "we'll revisit this" note) |
+| Native `ENUM` (e.g. `robot_status`) | `enum.Enum` | A custom type you define once (`CREATE TYPE ... AS ENUM (...)`), then reuse as a column type — enforced by the database itself, the same guarantee Day 1's Python `Enum` classes gave you, but now impossible to bypass even from outside the Python app entirely |
+
+**Why `NUMERIC` instead of a floating-point type for `battery_level`:**
+PostgreSQL also has `REAL`/`DOUBLE PRECISION` (binary floating point,
+like Python's `float`), but those can't represent every decimal value
+exactly — the classic `0.1 + 0.2 != 0.3` problem. `NUMERIC` stores
+decimal digits exactly, which matters here because a battery
+percentage is exactly the kind of "displayed to a human, compared
+against a threshold" value where a tiny rounding error could cause a
+wrong alert.
+
+---
+
+## Deep Dive: Primary & Foreign Keys
+
+- **Primary key (`PRIMARY KEY`)** — uniquely identifies a row within
+  its own table. Today's tables use `SERIAL PRIMARY KEY`, meaning
+  PostgreSQL both auto-generates the value *and* guarantees no two
+  rows in that table can ever share one. This is the formalized,
+  enforced version of the plain `self.id = robot_id` attribute Day 1's
+  Python classes had — nothing stopped two `Robot` instances from
+  sharing an `id` in yesterday's code; today, the database itself
+  refuses to allow it.
+- **Foreign key (`REFERENCES other_table(id)`)** — a column whose
+  value must match an existing primary key value in another table (or
+  be `NULL`, if the column allows it). `robots.facility_id INTEGER NOT
+  NULL REFERENCES facilities(id)` means PostgreSQL will physically
+  reject an `INSERT` that tries to set `facility_id` to a value that
+  isn't a real, existing facility's `id`. Day 1's plain Python had no
+  equivalent guard at all — `Robot(1, "RX-1001", ..., facility_id=999)`
+  would have worked fine even with no `Facility` with `id=999` in
+  existence.
+- **Referential integrity** is the umbrella term for what foreign keys
+  guarantee: the database's data can never point at something that
+  doesn't exist. This is the single biggest structural upgrade from
+  Day 1's in-memory lists (which had zero integrity guarantees) to
+  today's real schema.
+- **Creation order matters** because of foreign keys: a table can't
+  reference another table that doesn't exist yet. This is exactly why
+  today's `schema.sql` builds tables in a specific sequence
+  (`facilities` → `operators`/`robots` → `missions` →
+  `diagnostic_logs`) — each numbered step in that file depends on
+  every step before it.
+
+---
+
+## Deep Dive: CRUD Operations
+
+CRUD — Create, Read, Update, Delete — is the same four-operation cycle
+regardless of language or storage engine, but today's SQL versions are
+worth contrasting directly against their Day 1 Python equivalents:
+
+| Operation | Day 1 (Python, in-memory) | Day 2 (SQL, PostgreSQL) |
+|---|---|---|
+| **Create** | `Robot(1, "RX-1001", ...)` — appends to `Robot.registry` | `INSERT INTO robots (...) VALUES (...)` |
+| **Read** | `Robot.find_by_id(1)` — loops through `registry` by hand | `SELECT * FROM robots WHERE id = 1;` |
+| **Update** | `robot.status = RobotStatus.MAINTENANCE` — mutates the object directly | `UPDATE robots SET status = 'Maintenance' WHERE id = 1;` |
+| **Delete** | Never implemented on Day 1 — Python's `list.remove()` would've been needed | `DELETE FROM robots WHERE id = 1;` |
+
+**The single most important habit to build today:** every `UPDATE` and
+`DELETE` needs a `WHERE` clause, or it applies to *every row in the
+table*. Day 1's Python had no real equivalent danger — mutating
+`robot.status` only ever touched the one object you had a reference
+to. SQL's `UPDATE`/`DELETE` default to "every row" unless told
+otherwise, which is the opposite default from what most
+application-code intuition expects.
+
+**`RETURNING`** (used in today's Step 2 `INSERT`) is a PostgreSQL
+convenience that hands back the row (or specific columns) that was
+just created, in the same round-trip — useful because `SERIAL` means
+you don't know the new row's `id` until after the `INSERT` runs.
+
+---
+
+## Deep Dive: Joins & Aggregate Queries
+
+**JOIN** combines rows from two (or more) tables based on a matching
+condition — typically a foreign key relationship. `JOIN robots r ON
+r.id = m.robot_id` says: "for every mission row, find the robot row
+whose `id` matches this mission's `robot_id`, and combine them into one
+result row." This is the SQL-native version of what Day 1's
+`Robot.find_by_id(mission.robot_id)` simulated by hand, one Python
+function call at a time, inside a loop.
+
+- **`INNER JOIN`** (what plain `JOIN` means by default) only returns
+  rows where a match exists on *both* sides. A mission whose
+  `robot_id` somehow pointed at a robot that didn't exist wouldn't
+  appear in the results at all — silently dropped, not an error. (This
+  is exactly the scenario the challenge's research prompts ask you to
+  think through.)
+- **Multi-table JOINs** (needed for today's challenge) chain this
+  pattern: `missions JOIN robots ON ... JOIN operators ON ...` pulls
+  in matching rows from *three* tables in one query, rather than
+  looking each one up separately the way three sequential
+  `find_by_id()` calls did in Python.
+
+**Aggregate functions** (`COUNT`, `SUM`, `AVG`, `MAX`, `MIN`) collapse
+many rows down into one summary value. Paired with `GROUP BY`, they
+collapse many rows into one summary row *per group* — today's
+Reliability Metrics query groups by `r.model`, producing one row per
+robot model rather than one row per mission.
+
+- **`GROUP BY` mental model:** imagine physically sorting every joined
+  `mission`+`robot` row into separate piles, one pile per distinct
+  `model` value, and then running `COUNT`/`SUM` separately *within
+  each pile*. Any column in the `SELECT` list that isn't wrapped in an
+  aggregate function must appear in the `GROUP BY` clause — PostgreSQL
+  enforces this and will error otherwise, because it wouldn't know
+  which row's value to show for an un-grouped, non-aggregated column
+  when multiple rows collapse into one.
+- **`CASE WHEN ... THEN ... ELSE ... END`** inside an aggregate
+  (`SUM(CASE WHEN m.status = 'Completed' THEN 1 ELSE 0 END)`) is a
+  conditional counting pattern: count a row only if it meets a
+  condition. This is the SQL equivalent of Day 1's
+  `if robot.status != RobotStatus.OFFLINE and robot.is_low_battery(threshold)`
+  filtering logic — same conditional idea, expressed as an aggregate
+  instead of a Python `if` inside a loop.
+
+---
+
+## Architectural Analysis
+
+Today's schema is a direct, deliberate translation of Day 1's plain
+Python classes — not a redesign. Every field on `Robot.__init__`
+appears as a column on `robots`; every relationship implied by an
+`_id` parameter (`facility_id`, `robot_id`, `operator_id`) becomes an
+explicit `REFERENCES` foreign key. That one-to-one mapping is the
+point: Day 1 taught you to *think* in terms of this data shape without
+the ceremony of a database; today gives that same shape real teeth —
+referential integrity, type enforcement, and durability across process
+restarts, none of which yesterday's in-memory `registry` lists had.
+
+Two upgrades happened today that Day 1 had no way to provide:
+
+1. **Referential integrity.** Yesterday, nothing stopped a `Mission`
+   from referencing a `robot_id` that didn't exist. Today, the
+   database itself refuses that `INSERT`.
+2. **Concurrent, durable access.** Yesterday's data lived in one
+   Python process's memory — accessible only to that process, gone
+   the moment it exited. Today's data lives in a server process that
+   multiple connections (multiple `psql` sessions, and soon,
+   SQLAlchemy connections from FastAPI) can read and write
+   simultaneously, and that survives a machine restart.
+
+Business Question #3 (Reliability Metrics) was deliberately chosen as
+today's main JOIN+aggregate demo — rather than revisiting Business
+Question #2 again — specifically so the *challenge* (co-location, in
+SQL) still feels like new territory rather than a repeat of the demo
+verbatim, while still building on the exact JOIN syntax the demo just
+taught.
+
+---
+
+## Common Pitfalls & Anti-Patterns
+
+- **`UPDATE`/`DELETE` without a `WHERE` clause.** The single most
+  dangerous habit to build today. Always write the `WHERE` clause
+  *first*, mentally, before the rest of the statement — or run the
+  equivalent `SELECT ... WHERE ...` first to confirm exactly which
+  rows would be affected before switching it to `UPDATE`/`DELETE`.
+- **Forgetting `setval()` after seeding with explicit IDs.** If you
+  `INSERT` rows with hardcoded `id` values (as `seed.sql` does), the
+  table's `SERIAL` sequence doesn't automatically know about them. The
+  very next plain `INSERT` (letting `SERIAL` generate the id) can
+  collide with an id you already used by hand, causing a `duplicate
+  key value violates unique constraint` error.
+- **Creating tables out of dependency order.** Trying to `CREATE TABLE
+  missions` before `robots` and `operators` exist raises `ERROR:
+  relation "robots" does not exist` — always create the table with
+  zero (or already-satisfied) foreign key dependencies first.
+- **Confusing `VARCHAR(n)` truncation expectations.** Unlike some
+  other databases, PostgreSQL doesn't silently truncate a string that
+  exceeds a `VARCHAR(n)` limit — it raises an error
+  (`value too long for type character varying(n)`) instead. This is
+  usually the *better* behavior (fail loudly rather than silently lose
+  data), but it surprises people expecting truncation.
+- **Mixing up `INNER JOIN` and `LEFT JOIN` expectations.** Assuming
+  every mission will appear in a `JOIN robots` result, even ones with
+  data problems, when plain `JOIN` (`INNER JOIN`) silently drops any
+  row without a match on both sides. If "show me every mission, even
+  ones with a broken foreign key reference" is the actual goal,
+  `LEFT JOIN` is the correct tool — `INNER JOIN` is not.
+- **Adding a non-aggregated, non-grouped column to a `GROUP BY`
+  query's `SELECT` list.** PostgreSQL will reject this with `column
+  "..." must appear in the GROUP BY clause or be used in an aggregate
+  function` — a stricter (and more correct) behavior than databases
+  that silently pick an arbitrary row's value for that column.
+- **Pasting a line that includes the `psql` prompt text, not just the
+  command.** Documentation (including this course's) often shows the
+  prompt and command together for readability — `robopulse_dev=# \i
+  schema.sql`. That prompt is something `psql` *prints*; if it gets
+  pasted along with the command, `psql` doesn't recognize it as a
+  command at all and silently starts buffering it as an incomplete SQL
+  statement. The prompt flips to `robopulse_dev-#` (dash instead of
+  equals) — everything typed after that, including a real `\i`, gets
+  swallowed into the stuck buffer with **no error message at all**.
+  Recovery: type `;` or `\q` to clear the buffer and get back to a
+  clean prompt. This is the exact reason today's workflow prefers
+  one-shot `psql -f file.sql` runs from PowerShell over a long
+  interactive session for actually running the `.sql` files.
+- **Running a `.sql` file against stale (or empty) content because it
+  wasn't saved.** VS Code's editor tabs show an unsaved-changes
+  indicator (a dot, ●, instead of the usual close ✕) when a file has
+  edits not yet written to disk. `psql -f`/`\i` reads whatever is
+  actually on disk, not what's currently displayed in the editor — a
+  file that's brand new and never saved (or was pasted into but never
+  `Ctrl+S`'d) runs as an empty file: zero statements execute, zero
+  output prints, and **zero error appears**, since an empty file isn't
+  technically invalid SQL. `\dt` afterward correctly (if confusingly)
+  reports no tables, because none were ever actually created. Checking
+  `(Get-Item schema.sql).Length` or `Get-Content schema.sql` before
+  re-running is the fastest way to rule this out.
+
+---
+
+## Troubleshooting Guide
+
+| Symptom | Likely Cause | Fix |
+|---|---|---|
+| `psql: command not found` (or not recognized) | `psql.exe`'s folder wasn't added to `PATH`, or VS Code was already running when the installer updated `PATH` — a new integrated terminal *tab* doesn't re-read it, only a fresh application launch does | Fully close and reopen VS Code (not just a new terminal tab), then reopen the `robo-pulse` folder; if it still fails, add `C:\Program Files\PostgreSQL\16\bin` to `PATH` manually via *System Properties → Environment Variables* |
+| `psql: error: connection to server ... failed` | The PostgreSQL Windows Service isn't running | Run `Get-Service -Name postgresql-x64-16` to check status; start it with `Start-Service -Name postgresql-x64-16` if stopped |
+| `FATAL: password authentication failed for user "postgres"` | Wrong password, or forgotten from install time | Re-run the installer to reset it, or use `pgAdmin`'s saved connection if it remembers the password |
+| `ERROR: relation "robots" does not exist` | Trying to reference or query a table that hasn't been created yet, or `schema.sql` was run out of order / only partially | Re-run `schema.sql` in full from the top, or check `\dt` to see which tables actually exist |
+| `ERROR: duplicate key value violates unique constraint "robots_pkey"` | The `SERIAL` sequence is out of sync with hand-inserted IDs — usually means the `setval()` lines at the end of `seed.sql` were skipped | Re-run the `setval()` statements from `seed.sql`, or check `SELECT MAX(id) FROM robots;` against the sequence's current value |
+| `ERROR: insert or update on table "robots" violates foreign key constraint` | Trying to insert a `facility_id` (or similar) that doesn't exist in the referenced table | Check the value being inserted against `SELECT id FROM facilities;` — it must match an existing row |
+| `ERROR: column "..." must appear in the GROUP BY clause or be used in an aggregate function` | A `SELECT` column in a `GROUP BY` query isn't wrapped in an aggregate and isn't listed in `GROUP BY` | Either wrap it in an aggregate function (`MAX(...)`, etc.) or add it to the `GROUP BY` clause |
+| `\i` (or paths in general) says `No such file or directory` for a file you know exists | The relative path is being resolved against the wrong working directory — `psql`'s own cwd for `\i`, PowerShell's cwd for `-f`, neither of which is necessarily the VS Code workspace root | Run `Get-Location` (PowerShell) to confirm exactly where you are before running the command; use a bare filename (`schema.sql`) only when already in the same folder as the file |
+| Prompt shows `robopulse_dev-#` (a **dash**) instead of `robopulse_dev=#`, and nothing typed afterward seems to do anything | A previous line's input (often a pasted prompt+command combo) left `psql` mid-buffer, waiting for a `;` that never arrived — every subsequent line is being silently absorbed into that buffer, not executed | Type `;` and press Enter to terminate and discard the pending buffer, or `\q` to exit the session entirely and reconnect fresh |
+| `psql -f file.sql` (or `\i file.sql`) runs with **no output at all**, and a following `\dt` shows no tables | The file is empty, or contains only comments — usually because it was edited in VS Code but never saved (`Ctrl+S`) before running | Check `(Get-Item file.sql).Length` (should be well over 0) and `Get-Content file.sql` (should show the real SQL) before re-running; save the file in the editor if either check looks wrong |
+
+---
+*RoboPulse Fleet Command Center — Day 2 of 13*
