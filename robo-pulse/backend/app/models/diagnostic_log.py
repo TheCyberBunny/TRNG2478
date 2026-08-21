@@ -1,10 +1,35 @@
+"""
+Diagnostic Log Model - Day 3 SQLALchemy ORM version
+"""
 
+from __future__ import annotations
 
+from typing import TYPE_CHECKING
 
+from sqlalchemy import ForeignKey, Integer, Text, DateTime, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
+from .base import Base
 
+if TYPE_CHECKING:
+    from .mission import Mission
 
+class DiagnosticLoc(Base):
+    __tablename__ = "diagnostic_logs"
 
+    id: Mapped[int] = mapped_column(primary_key=True)
+    mission_id: Mapped[int] = mapped_column(Integer, ForeignKey("missions.id"))
+    file_url: Mapped[str] = mapped_column(Text)
+    notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    #server_default=func.now() sets the default value of the created_at column
+    #to the current timestamp when a new record is inserted into the database
+
+    mission: Mapped["Mission"] = relationship(back_populates="diagnostic_logs")
+
+    def __repr__(self) -> str:
+        return (f"DiagnosticLog(id={self.id}, mission_id={self.mission_id}, "
+                f"file_url={self.file_url!r})")
 
 
 
