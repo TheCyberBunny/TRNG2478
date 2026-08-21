@@ -42,9 +42,14 @@ class Mission(Base):
     robot_id: Mapped[int]= mapped_column(Integer, ForeignKey("robots.id"))
     operator_id: Mapped[int] = mapped_column(Integer, ForeignKey("operators.id"))
 
+    #Left: singular because this is the 'one' side of the relationship
+    #Right: plural because this is the 'to-many' side of the relationship
     robot: Mapped["Robot"] = relationship(back_populates="missions")
     operator: Mapped["Operator"] = relationship(back_populates="missions")
+
     #because this is a list, "mission" needs to be singular
+    #Left: plural because this is the 'many' side of the relationship
+    #Right: singular because it is the 'to-one' side of the relationship
     diagnostic_logs: Mapped[list["DiagnosticLog"]] = relationship(back_populates="mission")
 
     #update the mission status to completed

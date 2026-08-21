@@ -1,0 +1,74 @@
+## Phase B: Student Challenge — Business Question #2 in the ORM (Co-Location Discrepancy)
+ 
+**The Delta:** Day 1 solved this with manual `find_by_id()` lookups in
+plain Python. Day 2 solved it with a hand-written three-table SQL
+`JOIN`. Today's challenge solves the *exact same business question* a
+third time — as an async SQLAlchemy `select()` with explicit `.join()`
+calls, against the models you built in Phase A:
+ 
+> *How many robots are assigned to field operators who are NOT
+> co-located at the same physical facility?*
+ 
+### Requirements
+ 
+1. Create a new file, `scripts\day3_challenge.py`, containing an async
+   function `find_colocation_discrepancies_orm(session)` that returns
+   every `Mission` where the assigned robot's `facility_id` does not
+   match the assigned operator's `facility_id`.
+2. Build the query using SQLAlchemy 2.0's `select()` with **explicit
+   `.join()` calls** — `select(Mission).join(Robot, ...).join(Operator,
+   ...)` — not relationship-based eager loading followed by filtering
+   in Python. The comparison
+   (`Robot.facility_id != Operator.facility_id`) must happen inside a
+   `.where()` clause, so PostgreSQL does the filtering, the same way
+   Day 2's `WHERE r.facility_id != o.facility_id` did.
+3. Your function must accept an `AsyncSession` as a parameter — don't
+   create or open a session inside the function itself.
+4. Add a `main()` (mirroring `day3_demo.py`'s shape) that opens a
+   session, calls your function, and prints each discrepancy in a
+   readable format, e.g.:
+```
+   == Co-Location Discrepancy Report (via ORM) ==
+     Mission 2 (Warehouse Perimeter Patrol): robot at facility 2, operator at facility 1
+```
+5. Run it against the real, already-seeded `robopulse_dev` database
+   (no re-seeding needed) and confirm it returns exactly one row:
+   Mission 2 ("Warehouse Perimeter Patrol").
+### Constraints
+ 
+- Use SQLAlchemy 2.0's unified `select()` construct (`from sqlalchemy
+  import select`) — not the older `Session.query(...)` style, which
+  predates SQLAlchemy 2.0 and isn't what this course uses.
+- You'll join **three** tables' worth of ORM classes (`Mission`,
+  `Robot`, `Operator`) — one more than Step 8's single-table query.
+- Don't hardcode any specific mission, robot, or operator ID anywhere
+  in your query — it should work correctly even if the seed data
+  changes.
+- Reuse the pattern already established in `day3_demo.py` for opening
+  a session (`async with AsyncSessionLocal() as session:`) rather than
+  inventing a different session-handling style.
+### Research Prompts
+ 
+- Compare two ways of writing this query: (a) explicit `.join()` calls
+  as required above, versus (b) `select(Mission).options(
+  selectinload(Mission.robot), selectinload(Mission.operator))`
+  followed by a Python `if mission.robot.facility_id !=
+  mission.operator.facility_id:` check. Both would produce the correct
+  final answer — what's actually different about *where* the filtering
+  work happens, and which approach would scale better against a
+  missions table with a million rows?
+- Look up the difference between `selectinload` (used in Step 8/9) and
+  `joinedload` (another eager-loading strategy). Both solve the
+  `MissingGreenlet` problem — what's different about the SQL each one
+  actually generates?
+- SQLAlchemy's `.join()` defaults to an inner join, same as Day 2's
+  plain `JOIN`. Look up `.outerjoin()` and consider: what would change
+  about this query's results if a mission's `operator_id` pointed at
+  an operator that didn't exist? Compare your answer to the same
+  research prompt from Day 2's challenge — is the behavior the same
+  across raw SQL and the ORM?
+- Skim SQLAlchemy 2.0's migration notes on `Query` vs `select()`. If
+  you find older StackOverflow answers or tutorials using
+  `session.query(Mission).join(...)`, that's the pre-2.0 style — note
+  what's different about the syntax, even though the underlying idea
+  (SQL JOIN) is identical.
