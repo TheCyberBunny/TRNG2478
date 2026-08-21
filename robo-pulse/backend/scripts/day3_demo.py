@@ -25,6 +25,7 @@ async def find_low_battery_robots(session, threshold: int = 20) -> list[Robot]:
     #statement object: a SQLAlchemy construct that represents a SQL SELECT statement
     statement = (
         select(Robot)
+        
         .options(selectinload(Robot.facility))
         .where(Robot.status != RobotStatus.OFFLINE, Robot.battery_level < threshold)
         .order_by(Robot.id)

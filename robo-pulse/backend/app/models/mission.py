@@ -19,6 +19,10 @@ if TYPE_CHECKING:
     from .operator import Operator
     from .robot import Robot
 
+    #non-lambda version of values_callable for reference
+    #def get_enum_values(enum_cls):
+    #   return [member.avlue for member in enum_cls]
+
 class Mission(Base):
     __tablename__ = "missions"
 
@@ -28,7 +32,13 @@ class Mission(Base):
         SqlEnum(
             MissionPriority,
             name="mission_priority",
+            #values_callable is parameter of the SqlEnum()
+            #setting that equal to a lambda fucntion to loop through MissionPriority
             values_callable=lambda enum_cls: [member.value for member in enum_cls],
+            #Here is a version of values_callable that is not a lambda function
+            #Note that you would need to define the function above the class and call it
+            #I will add it in line 22
+            #values_callable=get_enum_values,
         )
     )
     status: Mapped[MissionStatus] = mapped_column(
