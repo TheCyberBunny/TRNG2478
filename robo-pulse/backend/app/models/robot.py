@@ -23,7 +23,7 @@ class Robot(Base):
     #here is a table level constraint where the battery_level column is ALWAYS between 0 and 100
     __table_args__ = (
         CheckConstraint("battery_level BETWEEN 0 AND 100",
-                        name="battery_level_range")
+                        name="battery_level_range"),
     )
 
     id: Mapped[int] = mapped_column(primary_key = True)
@@ -40,7 +40,7 @@ class Robot(Base):
         ),
         default=RobotStatus.IDLE,
     )
-    battery_level: Mapped[Decimal] = mapped_column(Numeric(5.2))
+    battery_level: Mapped[Decimal] = mapped_column(Numeric(5,2))
     facility_id: Mapped[int] = mapped_column(Integer, ForeignKey("facilities.id"))
 
     facility: Mapped["Facility"] = relationship(back_populates="robots")

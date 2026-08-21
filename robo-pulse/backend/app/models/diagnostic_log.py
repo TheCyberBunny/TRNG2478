@@ -4,6 +4,7 @@ Diagnostic Log Model - Day 3 SQLALchemy ORM version
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import TYPE_CHECKING
 
 from sqlalchemy import ForeignKey, Integer, Text, DateTime, func
@@ -14,7 +15,7 @@ from .base import Base
 if TYPE_CHECKING:
     from .mission import Mission
 
-class DiagnosticLoc(Base):
+class DiagnosticLog(Base):
     __tablename__ = "diagnostic_logs"
 
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -24,6 +25,7 @@ class DiagnosticLoc(Base):
 
     #server_default=func.now() sets the default value of the created_at column
     #to the current timestamp when a new record is inserted into the database
+    created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
     mission: Mapped["Mission"] = relationship(back_populates="diagnostic_logs")
 
