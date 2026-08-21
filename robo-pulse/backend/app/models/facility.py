@@ -33,8 +33,8 @@ class Facility(Base):
     supervisor_id: Mapped[int] = mapped_column(Integer)
 
     #creating our relationships with other tables
-    robots: Mapped[list["Robot"]] = relationship(back_populates="facilities")
-    operators: Mapped[list["Operator"]] = relationship(back_populates="facilities")
+    robots: Mapped[list["Robot"]] = relationship(back_populates="facility")
+    operators: Mapped[list["Operator"]] = relationship(back_populates="facility")
 
     def __repr__(self) -> str:
         return (f"Facility(id={self.id}, name={self.name!r}, "

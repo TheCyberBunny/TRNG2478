@@ -44,6 +44,7 @@ class Mission(Base):
 
     robot: Mapped["Robot"] = relationship(back_populates="missions")
     operator: Mapped["Operator"] = relationship(back_populates="missions")
+    #because this is a list, "mission" needs to be singular
     diagnostic_logs: Mapped[list["DiagnosticLog"]] = relationship(back_populates="mission")
 
     #update the mission status to completed

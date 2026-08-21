@@ -25,7 +25,7 @@ class Operator(Base):
     facility_id: Mapped[int] = mapped_column(Integer, ForeignKey("facilities.id"))
 
     facility: Mapped["Facility"] = relationship(back_populates="operators")
-    missions: Mapped[list["Mission"]] = relationship(back_populates="operators")
+    missions: Mapped[list["Mission"]] = relationship(back_populates="operator")
 
     def __repr__(self) -> str:
             return (f"Operator(id={self.id}, name={self.name!r}, "
