@@ -1,6 +1,71 @@
 """
-Mission Model - Day 1 plain python version
+Mission Model - Day 3 SQLAlchemy ORM Version
 """
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy import Enum as SqlEnum
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .base import Base
+from .enums import MissionPriority, MissionStatus
+
+
+if TYPE_CHECKING:
+    from .diagnostic_log import DiagnosticLog
+    from .operator import Operator
+    from .robot import Robot
+
+class Mission(Base):
+    __tablename__ = "missions"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    title: Mapped[str] = mapped_column(String(150))
+    priority: Mapped[MissionPriority] = mapped_column(
+        SqlEnum(
+            MissionPriority,
+            name="mission_priority",
+            values_callable=lambda enum_cls: [member.value for member in enum_cls],
+        )
+    )
+    status: Mapped[MissionStatus] = mapped_column(
+        SqlEnum(
+            MissionStatus,
+            name="mission_status",
+            values_callable = lambda enum_cls: [member.value for member in enum_cls],
+        ),
+        default=MissionStatus.PENDING,
+    )
+    robot_id: Mapped[int]= mapped_column(Integer, ForeignKey("robots.id"))
+    operator_id: Mapped[int] = mapped_column(Integer, ForeignKey("operators.id"))
+
+    robot: Mapped["Robot"] = relationship(back_populates="missions")
+    operator: Mapped["Operator"] = relationship(back_populates="missions")
+    diagnostic_logs: Mapped[list["DiagnosticLog"]] = relationship(back_populates="mission")
+
+    #update the mission status to completed
+    def mark_completed(self) -> None:
+        self.status = MissionStatus.COMPLETED
+    
+        #update the mission status to Failed
+    def mark_failed(self) -> None:
+        self.status = MissionStatus.FAILED
+
+    def __repr__(self) -> str:
+        return (f"Mission(id={self.id}, title={self.title!r}, "
+                f"priority={self.priority.value}, status={self.status.value})")
+
+
+
+
+
+
+"""
+Mission Model - Day 1 plain python version
+
 
 from typing import ClassVar
 
@@ -29,7 +94,7 @@ class Mission:
     def mark_failed(self) -> None:
         self.status = MissionStatus.FAILED
 
-        """
+        
         In-class question answered:
         The above methods follow the Domain-Driven Design(DDD) architecture.
         In a future iteration, we may have wanted to have additional functionality happen when the status
@@ -47,7 +112,7 @@ class Mission:
                 return
             
             self.status == new_status
-        """
+        
 
 
 
@@ -62,3 +127,4 @@ class Mission:
     def __repr__(self) -> str:
         return (f"Mission(id={self.id}, title={self.title!r}, "
                 f"priority={self.priority.value}, status={self.status.value})")
+"""
