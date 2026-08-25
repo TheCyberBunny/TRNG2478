@@ -27,3 +27,7 @@ class MissionStatus(str, Enum):
     COMPLETED = "Completed"
     FAILED = "Failed"
 
+class UserRole(str, Enum):
+    FLEET_ADMIN = "Fleet Admin"
+    FIELD_OPERATOR = "Field Operator"
+    AUDITOR = "Auditor"
