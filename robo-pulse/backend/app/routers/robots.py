@@ -32,7 +32,7 @@ async def list_robots(
     ),
     db: AsyncSession = Depends(get_db),
     #Day 5 Addition Here
-    _: User = Depends(get_current_user)
+    _: User = Depends(get_current_user),
 ) -> list[Robot]:
     """
     Business Question #1: Low Battery Alert - a fourth time.
