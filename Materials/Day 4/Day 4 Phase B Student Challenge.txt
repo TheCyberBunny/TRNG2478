@@ -1,0 +1,75 @@
+Day 4 Phase B: Student Challenge
+
+## Phase B: Student Challenge — Business Question #2 as an Endpoint (Co-Location Discrepancy)
+ 
+**The Delta:** Day 1 solved this in plain Python. Day 2 solved it in
+raw SQL. Day 3 solved it as an async ORM query inside a standalone
+script. Today's challenge solves the *exact same business question* a
+fourth time — as a real FastAPI endpoint, reusing the JOIN logic from
+`day3_challenge.py` but now reachable at `GET /missions/discrepancies`:
+ 
+> *How many robots are assigned to field operators who are NOT
+> co-located at the same physical facility?*
+ 
+### Requirements
+ 
+1. Create `app/schemas/mission.py` containing a `DiscrepancyRead`
+   Pydantic schema with fields `mission_id: int`, `title: str`,
+   `robot_facility_id: int`, and `operator_facility_id: int`.
+2. Create `app/routers/missions.py` with an `APIRouter` (prefix
+   `/missions`, tag `"missions"`) containing a single endpoint:
+   `GET /missions/discrepancies`, returning
+   `response_model=list[DiscrepancyRead]`.
+3. Inside that endpoint, build a `select()` statement joining
+   `Mission`, `Robot`, and `Operator` — the same three tables Day 3's
+   `find_colocation_discrepancies_orm` joined — but this time, select
+   only the specific columns `DiscrepancyRead` needs (`Mission.id`,
+   `Mission.title`, `Robot.facility_id`, `Operator.facility_id`) rather
+   than full `Mission` objects. Use `.label(...)` on the two
+   `facility_id` columns so their names line up with
+   `robot_facility_id`/`operator_facility_id` on the schema.
+4. Add an **optional query parameter**, `priority`, typed as
+   `MissionPriority | None` (import `MissionPriority` from
+   `app.models`), that — when supplied — narrows the results to only
+   missions of that priority. (`GET
+   /missions/discrepancies?priority=Low`, for example.)
+5. Inject the database session the same way `robots.py` does:
+   `db: AsyncSession = Depends(get_db)`.
+6. Register your new router in `app/main.py`
+   (`app.include_router(missions.router)`), and confirm
+   `GET /missions/discrepancies` (no query parameter) returns exactly
+   one result: Mission 2 ("Warehouse Perimeter Patrol").
+### Constraints
+ 
+- Use SQLAlchemy 2.0's `select()` with explicit `.join()` calls and a
+  `.where()` filter — the same constraint from Day 3's challenge still
+  applies: PostgreSQL does the filtering, not a Python loop after the
+  fact.
+- Don't hardcode any specific mission, robot, or operator ID.
+- The `priority` query parameter must be genuinely optional — the
+  endpoint should still work exactly as before when it's omitted.
+- Reuse `Depends(get_db)` from `app/dependencies.py` — don't open a
+  session any other way.
+### Research Prompts
+ 
+- Look up how FastAPI handles an `Enum` type hint (like
+  `MissionPriority`) on a query parameter — what does the generated
+  OpenAPI docs page show for that parameter once you add it, and how
+  does it differ from `max_battery`'s plain `Decimal` field?
+- `result.mappings().all()` (used to turn a multi-column `select()`
+  result into plain dictionaries) is a different call than
+  `result.scalars().all()`, which every prior endpoint in this course
+  has used. Look up the difference — what does `.scalars()` assume
+  about the shape of each row that `.mappings()` doesn't?
+- Compare today's endpoint to `day3_challenge.py`'s
+  `find_colocation_discrepancies_orm`, which returned full `Mission`
+  ORM objects (and needed a follow-up `session.get()` call per row to
+  print facility IDs). Today's version selects only four specific
+  columns directly. What's the tradeoff — what could you *do* with a
+  full `Mission` object that you can't do with today's narrower
+  result, and does today's endpoint actually need that extra
+  capability?
+- Try requesting `GET /missions/discrepancies?priority=NotARealPriority`
+  from `/docs`. What status code comes back, and where did that
+  validation actually happen — inside your function body, or before
+  it?
