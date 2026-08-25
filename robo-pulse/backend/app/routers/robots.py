@@ -1,6 +1,8 @@
 """
 RoboPulse Fleet Command Center
 Day 4 - Robot endpoints.
+
+Day 5 - updated to use RBAC
 """
 
 from decimal import Decimal
@@ -9,8 +11,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db
-from app.models import Robot, RobotStatus
+from app.dependencies import get_db, get_current_user, require_role
+from app.models import Robot, RobotStatus, User, UserRole
 from app.schemas.robot import RobotCreate, RobotRead
 
 #our FastAPI router for the /robots endpoints. The prefix argument means that
@@ -29,6 +31,8 @@ async def list_robots(
         description="Only return robots strictly below this battery percentage.",
     ),
     db: AsyncSession = Depends(get_db),
+    #Day 5 Addition Here
+    _: User = Depends(get_current_user)
 ) -> list[Robot]:
     """
     Business Question #1: Low Battery Alert - a fourth time.
@@ -47,7 +51,8 @@ async def list_robots(
 
 #our GET /robots/{robot_id} endpoint, which returns a single robot by ID.
 @router.get("/{robot_id}", response_model=RobotRead)
-async def get_robot(robot_id: int, db: AsyncSession = Depends(get_db)) -> Robot:
+#Day 5 addition- user=depends added to parameter list
+async def get_robot(robot_id: int, db: AsyncSession = Depends(get_db), _: User = Depends(get_current_user)) -> Robot:
     robot = await db.get(Robot, robot_id)
     if robot is None:
         raise HTTPException(
@@ -58,7 +63,9 @@ async def get_robot(robot_id: int, db: AsyncSession = Depends(get_db)) -> Robot:
 
 #our POST /robots endpoint, which creates a new robot.
 @router.post("", response_model=RobotRead, status_code=status.HTTP_201_CREATED)
-async def create_robot(payload: RobotCreate, db: AsyncSession = Depends(get_db)) -> Robot:
+async def create_robot(payload: RobotCreate, db: AsyncSession = Depends(get_db),
+                       #Day 5 additon - require_role
+                       _: User = Depends(require_role(UserRole.FLEET_ADMIN))) -> Robot:
     robot = Robot(**payload.model_dump())
     db.add(robot)
     await db.commit()

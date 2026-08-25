@@ -1,0 +1,79 @@
+Day 5 Phase B: Student Challenge
+ 
+**The Delta:** Today's demo protected *existing* Day 4 endpoints.
+Today's challenge builds a **new** protected endpoint from scratch,
+combining Day 4's routing skills (path parameter, request body) with
+today's RBAC machinery, and reuses Day 3's `Mission.mark_completed()`
+/ `Mission.mark_failed()` methods for the first time since they were
+written:
+ 
+> Per the problem statement: *"Field Operator: ... can trigger mission
+> status changes."* Fleet Admins should be able to do this too (full
+> CRUD); Auditors, being read-only, should not.
+ 
+### Requirements
+ 
+1. Add a `MissionStatusUpdate` schema to `app/schemas/mission.py`,
+   with a single field: `status: MissionStatus` (import `MissionStatus`
+   from `app.models`).
+2. Add a `MissionRead` schema to the same file (`id`, `title`,
+   `priority`, `status`, `robot_id`, `operator_id`, with
+   `model_config = ConfigDict(from_attributes=True)`) — today's new
+   endpoint needs a response shape that returns a full mission, unlike
+   the narrow `DiscrepancyRead` from Day 4.
+3. In `app/routers/missions.py`, add:
+   `PATCH /missions/{mission_id}/status`, accepting `mission_id` as a
+   path parameter and a `MissionStatusUpdate` request body, returning
+   `response_model=MissionRead`.
+4. Protect it with
+   `Depends(require_role(UserRole.FLEET_ADMIN, UserRole.FIELD_OPERATOR))`
+   — note this passes **two** roles to the same `require_role(...)`
+   factory used with just one role back in Step 9.
+5. Look the mission up by `mission_id`; if it doesn't exist, raise a
+   `404` (matching the pattern already established in
+   `routers/robots.py`'s `get_robot`).
+6. If the incoming `status` is `MissionStatus.COMPLETED`, call the
+   mission's existing `mark_completed()` method (from Day 3's
+   `app/models/mission.py`) rather than setting `.status` directly. Do
+   the same for `MissionStatus.FAILED` with `mark_failed()`. For
+   `PENDING`/`IN_PROGRESS`, set `.status` directly (there's no
+   dedicated method for those on the model).
+7. Commit the change and return the updated mission.
+### Constraints
+ 
+- Reuse `require_role` and `get_db` from `app/dependencies.py` — don't
+  write new authentication/authorization logic.
+- Don't hardcode any specific mission ID.
+- The endpoint must actually call `mark_completed()`/`mark_failed()`
+  for those two statuses — not bypass them by setting `.status`
+  directly in every case, even though that would produce the same
+  final database value today. (These methods exist specifically so
+  that if RoboPulse later needs side effects on completion/failure —
+  logging, notifications, a completion timestamp — there's exactly one
+  place to add that logic.)
+### Research Prompts
+ 
+- Log in as each of the three seeded demo users and call this new
+  endpoint. Confirm: `admin` and `operator` succeed; `auditor` gets a
+  `403`. What's actually different about the request each of those
+  three sends — is it the request itself, or something about who's
+  making it?
+- Look up JWT expiration handling: what specifically happens, end to
+  end, once `ACCESS_TOKEN_EXPIRE_MINUTES` (30 minutes) passes on a
+  token a client is still using? Which function in today's code
+  raises the error, and what HTTP status code does the client
+  actually see?
+- `require_role(UserRole.FLEET_ADMIN)` (Step 9) and
+  `require_role(UserRole.FLEET_ADMIN, UserRole.FIELD_OPERATOR)`
+  (today's challenge) call the exact same factory function with a
+  different number of arguments. Re-read `require_role`'s definition
+  in `app/dependencies.py` — what Python language feature specifically
+  makes it possible for one function to accept either one role or
+  several, with no `if`/`else` branching needed inside `require_role`
+  itself?
+- JWTs are signed, not encrypted — today's notes mentioned this in
+  Step 4. Take a token from a logged-in session in `/docs` (the long
+  string starting with `eyJ...`) and manually decode just its middle
+  section (the payload) as base64, without a network connection or any
+  library — what do you find inside it, and does that change how
+  you'd think about ever putting sensitive data in a JWT payload?

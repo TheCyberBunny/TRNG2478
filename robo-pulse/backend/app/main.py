@@ -8,7 +8,7 @@ Run from backend/ with the venv active:
 
 from fastapi import FastAPI
 
-from app.routers import robots, missions
+from app.routers import robots, missions, auth
 
 #set up the FastAPI application with a title, description, and version. 
 # This metadata is used in the automatically generated OpenAPI documentation.
@@ -25,6 +25,7 @@ app = FastAPI(
 # in the robots router will be available under the /robots path.
 app.include_router(robots.router)
 app.include_router(missions.router)
+app.include_router(auth.router)
 
 #A simple health check endpoint to verify that the API is running.
 @app.get("/health", tags=["health"])
