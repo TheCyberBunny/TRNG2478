@@ -1,0 +1,74 @@
+Day 6 Phase B Student Challenge
+
+## Phase B: Student Challenge — Previewing Business Question #2 as a Component
+ 
+**The Delta:** Today's demo built a component tree for Business
+Question #1's data (the robot fleet). Today's challenge builds the
+same kind of component tree for Business Question #2's data — the
+Co-Location Discrepancy report — continuing the same running example a
+fifth time, now as a static, mock-data-driven UI:
+ 
+### Requirements
+ 
+1. Create `src/mockData/discrepancies.js`, exporting a
+   `mockDiscrepancies` array containing **exactly one object**, shaped
+   to match `day04_answer_key.md`'s verified `GET /missions/discrepancies`
+   response — but using JavaScript's `camelCase` convention instead of
+   the API's `snake_case` JSON keys: `missionId`, `title`,
+   `robotFacilityId`, `operatorFacilityId`.
+2. Create `src/components/missions/DiscrepancyCard.jsx` — a component
+   accepting a single `discrepancy` prop (mirroring `RobotCard`'s
+   `robot` prop pattern) and rendering an MUI `Card` showing the
+   mission's `title`, and both facility IDs clearly labeled (e.g. "Robot
+   Facility: 2" / "Operator Facility: 1").
+3. Inside `DiscrepancyCard`, use MUI's `Alert` component (`import {
+   Alert } from '@mui/material'`, `severity="warning"`) to display a
+   short message — something like `"Facility mismatch detected"` —
+   underneath the facility IDs.
+4. Create `src/components/missions/DiscrepancyList.jsx` — a component
+   accepting a `discrepancies` prop (an array) and mapping over it to
+   render one `DiscrepancyCard` per entry, following `RobotList.jsx`'s
+   composition pattern exactly, including a correctly-chosen `key`.
+5. Add a second section to `App.jsx`, below the existing Fleet
+   Overview section, with its own `Typography` heading (e.g.
+   "Co-Location Discrepancies") and a `<DiscrepancyList
+   discrepancies={mockDiscrepancies} />`.
+### Constraints
+ 
+- `DiscrepancyCard` and `DiscrepancyList` must not import or reference
+  `mockRobots`/`RobotCard`/`RobotList` in any way — this is a
+  parallel, independent component tree, not a variant of the robot
+  one.
+- Use `mission.missionId` (not the mission's array index) as the
+  `key` in `DiscrepancyList` — the same correctness reasoning from
+  Step 8 applies here.
+- Don't hardcode any of the discrepancy's actual values (title,
+  facility IDs) directly inside `DiscrepancyCard` itself — every
+  displayed value must come from the `discrepancy` prop.
+### Research Prompts
+ 
+- MUI's `Alert` component has four `severity` values:
+  `"error"`/`"warning"`/`"info"`/`"success"`. Look up what each one
+  looks like by default, and consider: is `"warning"` the right choice
+  for a co-location discrepancy, or would `"error"` fit the business
+  meaning better? There's a reasonable argument either way — be ready
+  to explain your choice.
+- Compare today's `mockDiscrepancies` array (one hardcoded object) to
+  `mockRobots` (four hardcoded objects). `RobotList` handles any
+  number of robots without modification. Confirm `DiscrepancyList`
+  would too — temporarily add a second, fabricated discrepancy object
+  to `mockDiscrepancies` and verify a second card renders automatically,
+  with no changes needed to `DiscrepancyList.jsx` itself.
+- React's docs describe components as ideally being "pure" — the same
+  props should always produce the same rendered output. Is
+  `DiscrepancyCard`, as you wrote it, pure by that definition? What
+  would make it *not* pure (hint: think about what happens if a
+  component reads from something other than its own props, like a
+  global variable or the current date)?
+- Skim the MUI documentation for the `Grid` component's `item` and
+  `container` props (already used in `RobotList`). What would change
+  visually if `DiscrepancyList` used a plain `Box` with `display:
+  'flex'` (via the `sx` prop) instead of `Grid` — is there a
+  meaningful difference for a single-column list like this one, or
+  does it only start to matter once there are enough cards to wrap
+  onto multiple rows?
