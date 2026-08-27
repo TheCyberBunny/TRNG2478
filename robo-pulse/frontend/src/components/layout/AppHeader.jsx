@@ -1,4 +1,4 @@
-import { AppBar, Toolbar, Typography } from '@mui/material';
+import { AppBar, Toolbar, Typography, Box, Button } from '@mui/material';
 import PrecisionManufacturingIcon from '@mui/icons-material/PrecisionManufacturing';
 
 {/* Every React component must return a single element. In this case, 
@@ -10,7 +10,8 @@ child elements. Inside the Toolbar, we have a PrecisionManufacturingIcon
 component, which is an icon from Material-UI's icon library, 
 and a Typography component, which is used to display the application title as a heading. */}
 
-function AppHeader() {
+//Day 7 - added username, role, onLogout to function params
+function AppHeader({username, role, onLogout}) {
   return (
     <AppBar position="static">
       <Toolbar>
@@ -18,6 +19,14 @@ function AppHeader() {
         <Typography variant="h6" component="h1">
           RoboPulse Fleet Command Center
         </Typography>
+        {/** Day 7 Code HERE */}
+        {username && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2}}>
+            <Typography variant="body2">{username}({role})</Typography>
+            <Button color="inherit" onClick={onLogout}>Log Out</Button>
+          </Box>
+        )}
+        {/**END DAY 7 Code HERE */}
       </Toolbar>
     </AppBar>
   );
