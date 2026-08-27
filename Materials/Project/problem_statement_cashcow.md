@@ -33,7 +33,7 @@ The new system must allow operations admins and field technicians to easily answ
 | location_region  |         | model            |         | priority         |
 | capacity         |         | status           |         | status           |
 | supervisor_id    |         | cash_level       |         | atm_id           |
-+------------------+         | facility_id      |         | technician_id    |
++------------------+         | branch_id        |         | technician_id    |
                              +------------------+         +------------------+
                                                                    | 1
                                                                    |
