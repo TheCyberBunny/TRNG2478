@@ -1,0 +1,71 @@
+Day 7 Phase B Student Challenge
+
+## Phase B: Student Challenge — The Discrepancy Report, Fully Wired
+ 
+**The Delta:** Business Question #2 has now been answered five times —
+Python, SQL, async ORM, a FastAPI endpoint, and a mock-data React
+component. Today's challenge answers it a sixth and final time,
+genuinely end-to-end: real data, fetched with Axios, authenticated via
+Context, rendered in a `DataGrid` — after this, there's no more "next
+tool" left to introduce for this particular question; it's simply part
+of the working application.
+ 
+### Requirements
+ 
+1. Create `src\components\missions\DiscrepancyDataGrid.jsx`, following
+   `RobotDataGrid.jsx`'s structure: `useState` for the data, loading,
+   and error; `useEffect` to fetch; a loading spinner and error
+   `Alert` before the grid itself.
+2. Column definitions must match the **real** API response shape
+   (`day04_answer_key.md`'s verified output) exactly:
+   `mission_id`, `title`, `robot_facility_id`, `operator_facility_id` —
+   snake_case, not Day 6's mock `camelCase` version.
+3. Since this data has no field literally named `id`, supply
+   `getRowId={(row) => row.mission_id}` explicitly.
+4. Add a priority filter: an MUI `Select` (or `TextField` with
+   `select` prop) offering four options — `""` (meaning "All"),
+   `"Low"`, `"Medium"`, `"Critical"` — controlled by its own
+   `useState`.
+5. When a specific priority is selected, the Axios call should pass it
+   as a query parameter: `apiClient.get('/missions/discrepancies', {
+   params: { priority: selectedPriority || undefined } })` (passing
+   `undefined` when the value is the empty string, so Axios omits the
+   parameter entirely rather than sending `?priority=`).
+6. The `useEffect` fetching this data must include the selected
+   priority in its dependency array, so changing the dropdown triggers
+   a new fetch automatically.
+7. Add a new section to `Dashboard` in `App.jsx`, below the existing
+   Fleet Overview section, rendering
+   `<DiscrepancyDataGrid />` under its own heading.
+### Constraints
+ 
+- Reuse `apiClient` from `api/client.js` — don't create a second
+  Axios instance.
+- Don't hardcode the discrepancy data anywhere — everything must come
+  from the live `GET /missions/discrepancies` response.
+- The priority filter must be genuinely optional, matching Day 4's
+  backend requirement — selecting no filter should show every
+  discrepancy, not zero results.
+### Research Prompts
+ 
+- Confirm all three seeded demo users (`admin`, `operator`,
+  `auditor`) can successfully load this grid. Compare that to Day 5's
+  `PATCH /missions/{id}/status` endpoint, which explicitly excluded
+  Auditors. Why is today's endpoint open to all three roles while that
+  one wasn't — what's actually different about *reading* a report
+  versus *changing* a mission's state?
+- Select a priority with zero matching discrepancies (e.g.
+  `"Critical"` — recall from Day 4's answer key that Mission 1 is
+  `Critical` but is *not* a discrepancy). Confirm the grid shows an
+  empty table, not an error. What in today's code specifically makes
+  that the correct, non-error outcome?
+- Compare this component's `useEffect` dependency array
+  (`[selectedPriority]`) to `RobotDataGrid`'s (`[]`, empty). What's
+  the practical, visible difference in behavior between an effect that
+  runs once versus one that re-runs whenever a specific piece of state
+  changes?
+- `DataGrid` has built-in client-side sorting and filtering, available
+  automatically on any data already loaded into the grid. Today's
+  priority filter instead re-fetches from the server every time it
+  changes. For a fleet with 50,000 missions instead of 4, which
+  approach would you want, and why?
