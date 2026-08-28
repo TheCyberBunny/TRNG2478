@@ -1,0 +1,58 @@
+Day 8 Phase B Student Challenge
+
+## Phase B: Student Challenge — Reconciling S3 and the Database
+ 
+**The Delta:** Today introduced two independent sources of truth about
+diagnostic files: the `diagnostic_logs` table (which *says* a file
+exists at some S3 URL) and the S3 bucket itself (which actually *has*
+whatever files were uploaded to it). Nothing today guarantees these
+two stay in sync — a database row could reference a file that was
+deleted from S3, or a file could be sitting in S3 with no
+corresponding database row at all. Today's challenge writes a
+reconciliation script to detect both situations.
+ 
+### Requirements
+ 
+1. Create `scripts\day8_verify_diagnostics.py`.
+2. Using `boto3`, list every object currently in the S3 bucket under
+   the `diagnostics/` prefix (`s3_client.list_objects_v2(Bucket=...,
+   Prefix="diagnostics/")`).
+3. Using Day 3's async ORM pattern, query every row in the
+   `diagnostic_logs` table.
+4. For each `DiagnosticLog` row, extract the S3 key from its
+   `file_url` (the part after the bucket name) and check whether that
+   key appears in the S3 listing from step 2.
+5. Print a report with two sections:
+   - **"Healthy"** — `DiagnosticLog` rows whose file genuinely exists
+     in S3.
+   - **"Broken (database row, no matching file)"** — rows whose
+     `file_url` doesn't correspond to anything actually in the bucket.
+6. Run it against your Day 8 data and confirm the one diagnostic log
+   created in Step 11 shows up as healthy.
+### Constraints
+ 
+- Don't hardcode the diagnostic log's ID or the S3 key anywhere —
+  the script should work correctly against any number of
+  `DiagnosticLog` rows and S3 objects.
+- Reuse `AsyncSessionLocal` from `app/database.py` — don't open a
+  connection any other way.
+- The S3 client should rely on the credentials `aws configure` already
+  set up (Step 5) — no access keys anywhere in this script either.
+### Research Prompts
+ 
+- As a bonus (not required, but worth trying): extend the report with
+  a third section — **"Orphaned (file in S3, no matching database
+  row)"** — objects that exist in the bucket but that no
+  `DiagnosticLog` row references at all. What real-world situation
+  would actually produce this (as opposed to the "Broken" case)?
+- `list_objects_v2` returns at most 1,000 objects per call, using a
+  pagination token for anything beyond that. Look up boto3's
+  **paginators** — how would this script need to change to correctly
+  handle a bucket with more than 1,000 diagnostic files, and why would
+  today's version (as written) silently miss files beyond the first
+  1,000 without one?
+- This script currently runs as a one-off, manually. In a real
+  production system, when might a reconciliation check like this
+  actually need to run automatically (hint: think about what AWS
+  service this course has already learned is "Always Free" and
+  event-driven)?

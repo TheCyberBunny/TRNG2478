@@ -1,0 +1,3 @@
+Vibration sensor: nominal
+Battery Cycle Count: 142
+Last calibration: within tolerance
