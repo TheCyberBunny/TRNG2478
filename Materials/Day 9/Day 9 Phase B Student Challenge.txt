@@ -1,0 +1,80 @@
+Day 9 Phase B Student Challenge
+
+## Phase B: Student Challenge — The Redeploy Loop
+ 
+**The Delta:** Today's demo deployed the application once. Real
+projects redeploy constantly. Today's challenge is deliberately not
+about new business logic — it's about practicing the **change →
+repackage → redeploy → verify** loop that every future update to this
+backend will need, and noticing what does and doesn't need to be
+repeated.
+ 
+### Requirements
+ 
+1. In `app/main.py`, bump the `FastAPI(...)` constructor's `version`
+   argument from `"0.1.0"` to `"0.2.0"`.
+2. Add a new endpoint:
+````python
+   @app.get("/version", tags=["health"])
+   async def version() -> dict[str, str]:
+       return {"version": app.version}
+````
+3. Repackage **only** the application code — not the dependencies —
+   into a fresh zip. **Delete the existing `package\app` folder
+   completely before copying** — `Copy-Item -Recurse` merges into an
+   already-existing destination rather than replacing it, which
+   silently leaves the old code in place while nesting the new copy
+   one level too deep inside it:
+````powershell
+   Remove-Item -Recurse -Force package\app -ErrorAction SilentlyContinue
+   Copy-Item -Recurse app package\app
+   Compress-Archive -Path package\* -DestinationPath lambda_deployment.zip -Force
+````
+   Confirm the real, current code actually landed before deploying:
+````powershell
+   Get-Content package\app\main.py | Select-String "version"
+````
+````
+4. Deploy the updated code to the *existing* Lambda function:
+```powershell
+   aws lambda update-function-code `
+     --function-name robopulse-api `
+     --zip-file fileb://lambda_deployment.zip
+```
+5. Confirm the live change: `curl https://<your-function-url>/version`
+   should return `{"version":"0.2.0"}`.
+6. Open CloudWatch Logs for `robopulse-api` and locate the log entry
+   corresponding to that exact test request.
+ 
+### Constraints
+ 
+- Don't run Step 3's full `pip install --platform ...` packaging
+  command again — this challenge is specifically about recognizing
+  when that step is (and isn't) necessary.
+- Don't create a new Lambda function — update the existing
+  `robopulse-api` in place.
+ 
+### Research Prompts
+ 
+- `update-function-code` and `update-function-configuration` are two
+  separate CLI commands/API calls, not one combined "update
+  everything" operation. Why might AWS have deliberately split these
+  apart, rather than offering a single call that changes code and
+  environment variables together?
+- Today's challenge didn't need to repeat Step 3's dependency
+  packaging at all. What specifically **would** require re-running
+  it — what category of change to `requirements.txt` or the app's
+  dependencies would make the existing `package\` folder stale?
+- Look up Lambda **cold starts** — the noticeably slower response
+  time on a function's first invocation after a period of inactivity,
+  or immediately after a deployment. Why does this happen, and how
+  does keeping today's Lambda outside a VPC (Step 6's tradeoff)
+  actually help keep cold starts shorter, on top of avoiding the NAT
+  Gateway cost?
+- If today's redeploy had changed the **frontend** instead of the
+  backend (a new `dist\` folder re-synced to S3), would the change
+  appear instantly at the CloudFront URL, or is there an extra step
+  needed first? Think specifically about what CloudFront's entire
+  purpose as a CDN actually is.
+ 
+---

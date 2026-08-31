@@ -2,6 +2,6 @@
     "Variables": {
         "DATABASE_URL" : "postgresql+asyncpg://postgres:password@robopulse-2478.c29s6ismc3s3.us-east-1.rds.amazonaws.com:5432/robopulse",
         "SECRET_KEY" : "bbc88714d27e5ffbab45b6dddc551b01cd634a7cc47a06c774f9f1458ec21704",
-        "FRONTEND_ORIGIN" : "http://localhost:5173"
+        "FRONTEND_ORIGIN" : "https://dadvy8jf8g45x.cloudfront.net"
     }
 }
