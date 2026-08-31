@@ -78,3 +78,66 @@ Y
 
 We should see status as ok
 
+Next we are pointing our frontend at our remote backend
+
+In frontend\src\api\client.js:
+
+/axios.create is a function that builds a reusable pre-configured client
+const apiClient = axios.create({
+    //this is our FastAPI endpoint
+    baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
+});
+
+Next, we create \frontend\.env.production:
+
+VITE_API_BASE_URL:<your-lambda-function-url>
+
+
+Now, we can build the frontend from \frontend:
+ npm run build
+
+This creates the /dist folder to deploy to our frontend s3 bucket
+
+In the VS Code console:
+```
+aws s3 sync dist/ s3://robopulse-frontend-<your-suffix>/ --delete
+
+```
+Now that we have our frontend stored on a publicly accessible s3 bucket, we can start on the deployment
+
+NExt, let's go to the CloudFront Console > Create Distribution
+Free plan
+Name: robopulse
+Next
+Origin Type: Amazon S3
+Origin Protocol Policy: HTTP only
+S3 Origin: <your bucket url here> **grabbed from S3 bucket properties tab under Static Website Hosting at the bottom**
+NExt
+Next
+Create distribution
+
+On the general tab, click 'edit' and set the default root object to 'index.html'
+
+Once it shows 'deployed', copy the distribution's domain name
+
+Back in VS Code, edit the backend\lambda-env.json:
+```
+"FRONTEND_ORIGIN": "https://<your-cloudfront-domain>"
+
+```
+
+Now run the following command in powershell to apply the changes:
+```
+cd backend
+aws lambda update-function-configuration --function-name robopulse-api --environment file://lambda-env.json
+
+```
+
+Now our hard work can finally pay off. Visit the cloudfront url in a browser and you should see the login page. Login with 
+operator/OperatorPass123! to access the app and make sure you see the fleet datagrid
+
+
+
+
+
+
