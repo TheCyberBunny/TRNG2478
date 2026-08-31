@@ -1,0 +1,80 @@
+pip uninstall magnum
+
+pip install mangum
+
+updated our lambda_handler.py to say mangum NOT Magnum
+
+updated the requirements-lambda.txt to say mangum NOT Magnum
+
+Deleted /package
+
+next, we did the docker run command: docker run --rm -v "${PWD}:/var/task" -w /var/task public.ecr.aws/sam/build-python3.12 /bin/sh -c "pip install -r requirements-lambda.txt -t /var/task/package"
+
+Next, we ran the following 3 commands to populate our package and zip it:
+
+Copy-Item -Recurse app package\app
+Copy-Item lambda_handler.py package\lambda_handler.py
+Compress-Archive -Path package\* -DestinationPath lambda_deployment.zip -Force
+
+Next, we created our AWS Lambda function directly in the terminal:
+
+aws lambda create-function `
+  --function-name robopulse-api `
+  --runtime python3.12 `
+  --architectures x86_64 `
+  --role <arn-of-robopulse-lambda-execution-role> `
+  --handler lambda_handler.handler `
+  --zip-file fileb://lambda_deployment.zip `
+  --timeout 30 `
+  --memory-size 256 `
+  --region us-east-1
+
+
+Next, we generated our secret_key using this command:
+python -c "import secrets; print(secrets.token_hex(32))"
+
+copy the results
+
+Next, we created our env file for our lambda function to read our environment variables
+created backend\lambda-env.json:
+```
+{
+	"Variables" : {
+	"DATABASE_URL" : "postgresql+asyncpg://<user>:<password>@<rds-endpoint>:5432/robopulse",
+	"SECRET_KEY" : "<your-generated-key-copied-from-terminal>",
+	"FRONTEND_ORIGIN" : "http://localhost:5173"
+}
+}
+
+```
+
+We applied those variables to our lambda function using the following command:
+
+aws lambda update-function-configuration --function-name <your-lambda-function-name> --environment file://lambda-env.json
+
+In the AWS console, we opened the auth type for our lambda function
+
+lambda> robopulse-api-2478 > configuration > function URL > Create function URL
+
+Settings:
+- NONE auth type
+Save
+
+Copy the function URL
+
+Next, we opened the RDS connection to all IPV4
+
+Aurora and RDS > robopulse-2478 > Scrolled down to 'Security Group Rules' > select inbound rule
+
+selected inbound rule and under 'actions' > Edit inbound rules
+Change the dropdown from 'custom' to 'anywhere IPV4'
+
+save
+
+Back in VS Code, we can run a curl function to see if everything is running:
+
+curl <your-function-url>/health
+Y
+
+We should see status as ok
+
