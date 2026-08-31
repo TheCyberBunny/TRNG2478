@@ -6,6 +6,8 @@ Run from backend/ with the venv active:
     fastapi dev app/main.py
 
 Day 7 update- Added CORS configuration to connect with the frontend    
+
+Day 9 phase b answer key 
 """
 import os
 
@@ -24,7 +26,7 @@ app = FastAPI(
         "Fleet management API for Apex Robotics' autonomous "
         "inspection rovers and aerial drones."
     ),
-    version="0.1.0",
+    version="0.2.0", ##Day 9 change, bumped up from 0.1.0
 )
 
 #CORS Configuration
@@ -50,4 +52,9 @@ app.include_router(auth.router)
 @app.get("/health", tags=["health"])
 async def health_check() -> dict[str, str]:
     return {"status": "ok"}
+
+##Endpoint to check the version number
+@app.get("/version", tags=["health"])
+async def version() -> dict[str, str]:
+    return {"version": app.version}
 
