@@ -1,0 +1,51 @@
+Day 10 Phase B Student Challenge
+
+## Phase B: Student Challenge — Testing RBAC on the Status Endpoint
+ 
+**The Delta:** Today's demo tested `/robots`. Today's challenge tests
+Day 5's Phase B endpoint — `PATCH /missions/{mission_id}/status` —
+specifically because it has the most interesting RBAC shape in the
+whole application: **two** roles allowed (Fleet Admin, Field Operator)
+and **one** explicitly excluded (Auditor), a genuinely different
+pattern than the single-role checks tested today.
+ 
+### Requirements
+ 
+1. Create `tests\test_missions.py`.
+2. Add whatever additional fixtures are needed (a seeded `Operator`
+   and `Robot`, and a seeded `Mission` — check `app/models` for the
+   required fields on each) to support creating a real mission to
+   update.
+3. Write a test confirming a Fleet Admin **can** successfully call
+   `PATCH /missions/{id}/status` with `{"status": "Completed"}`, and
+   that the response reflects the updated status.
+4. Write a test confirming a Field Operator **can** also successfully
+   call it.
+5. Write a test confirming an Auditor is correctly **forbidden**
+   (`403`) from calling it.
+6. Write a test confirming a request for a non-existent mission ID
+   returns `404`, not a raw server error.
+### Constraints
+ 
+- Reuse `client`, `seeded_users`, and `auth_header()` from
+  `conftest.py` — don't duplicate their logic.
+- Don't hardcode a mission ID pulled from `robopulse_dev` — create the
+  mission your tests need directly, inside the test database, the
+  same way `seeded_facility` does.
+### Research Prompts
+ 
+- `db_session`'s fixture creates every table before each test and
+  drops every table after. What would change about test *speed* if
+  this were done once per entire test *session* instead of once per
+  individual test — and what would you lose by making that tradeoff?
+- Look up `pytest`'s `-k` flag for running a subset of tests by name,
+  and `pytest --cov` (via the `pytest-cov` package) for measuring
+  which lines of `app/` your current tests actually exercise. Run a
+  coverage report against today's test suite — which router has the
+  least coverage right now?
+- The 404 test in this challenge exercises `db.get(Mission,
+  mission_id)` returning `None`. Compare this to
+  `test_login_fails_with_wrong_password` from Step 5 — both test "the
+  expected, sanctioned failure path," not a crash. Why is testing that
+  a system fails *correctly*, not just that it succeeds, just as
+  important a category of test?
