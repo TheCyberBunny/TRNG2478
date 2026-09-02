@@ -1,4 +1,5 @@
-import { Container, Typography, Box} from '@mui/material'
+import { Container, Typography, Box, Snackbar, Alert} from '@mui/material'
+import {useState} from 'react'
 import AppHeader from './components/layout/AppHeader.jsx'
 // import RobotList from './components/robots/RobotList.jsx'
 // import DiscrepancyList from './components/missions/DiscrepancyList.jsx'
@@ -14,6 +15,7 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 function Dashboard(){
   //stores the current user object and logout function from the global AuthContext
   const {user, logout} = useAuth()
+  const [notification, setNotification] = useState(null)
 
   return (
     <>
@@ -32,6 +34,14 @@ function Dashboard(){
           <DiscrepancyDataGrid />
         </Box>
       </Container>
+
+      <Snackbar
+        open={Boolean(notification)}
+        autoHideDuration={4000}
+        onClose={() => setNotification(null)}>
+          <Alert severity="success" onClose={() => setNotification(null)}></Alert>
+        </Snackbar>
+
     </>
   );
 }

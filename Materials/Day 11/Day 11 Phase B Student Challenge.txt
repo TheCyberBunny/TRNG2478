@@ -1,0 +1,55 @@
+Day 11 Phase B Student Challenge
+
+## Phase B: Student Challenges
+ 
+Both parts' demo content is now complete. Two separate challenges
+follow — complete both.
+ 
+### Phase B (Part 1) — `bin/test.sh`
+ 
+**Requirement:** write `bin\test.sh`, following `setup.sh`/`seed.sh`'s
+established pattern, that: activates the backend venv, confirms
+`robopulse_test` exists (creating it via `psql` if not), and runs
+`pytest` from `backend\`. Use `set -e` and clear `echo` progress
+messages, matching today's demo scripts' style exactly.
+ 
+### Phase B (Part 2) — Fix One More Rough Edge, Properly
+ 
+**The Delta:** Pick **one** item from the list below.
+Apply the same disciplined methodology as Fix 1 above: **reproduce it
+first, understand precisely why the current behavior happens, fix the
+actual cause, and verify the fix** — with a `pytest` test where the
+issue is backend-side (reusing Day 10's infrastructure), or a clear
+manual verification writeup where it's frontend-only (this course
+hasn't set up frontend testing — note *why* as a Research Prompt).
+ 
+#### Candidate Rough Edges
+ 
+1. **Wire `Fix 2`'s `Snackbar` into `RobotDataGrid`'s actual
+	 success paths** — pass `onSuccess`
+   as a prop, called after a successful create/update, and have
+   `Dashboard` supply a function that sets `notification`. `DiscrepancyDataGrid`
+has no mutating action at all, so there is no need to wire up the snackbar
+to that component.
+2. **`register_user` (Day 5) doesn't check for a duplicate username
+   case-insensitively** — `"Admin"` and `"admin"` could currently both
+   be registered as different accounts. Write a failing test
+   confirming this, then fix `auth.py`'s existing-username check to be
+   case-insensitive.
+
+### Research Prompts
+ 
+- Frontend code has no automated tests in this project at all — only
+  the backend does (Day 10). Look up **Vitest** or **React Testing
+  Library**, the standard tools for this. What would a test for
+  `Fix 1`'s corrected `LoginForm` error-handling logic actually need
+  to simulate?
+- `set -e` (Part 1) makes a Bash script stop at the first failure.
+  What's the tradeoff — is there ever a case where you'd *want* a
+  setup script to keep going even after one step fails?
+- Compare today's bug-fixing methodology (reproduce → understand →
+  fix → verify) to Day 10's own testing philosophy directly. Is
+  "write a failing test that captures the bug, then fix the code until
+  it passes" meaningfully different from ordinary test-writing, or is
+  it the exact same skill pointed at an existing problem instead of a
+  new feature?
