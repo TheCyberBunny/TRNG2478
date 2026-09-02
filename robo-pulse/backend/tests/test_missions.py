@@ -2,6 +2,9 @@
 Robopulse command center
 Day 10 - Phase B student challenge answer key
 RBAC tests for PATCH /mission/{mission_id}/status endpoint
+
+Command to run:
+    pytest -v tests/test_missions.py
 """
 
 import pytest_asyncio

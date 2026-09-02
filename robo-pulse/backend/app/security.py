@@ -9,12 +9,14 @@ a real project being pushed to production(NOT SECURE).
 
 import os
 from datetime import datetime, timedelta, timezone
+from app.config import settings
 
 import bcrypt
 import jwt
 
 #Security Constants and helper functions for password hashing and JWT token management
-SECRET_KEY = os.environ.get("SECRET_KEY", "<replace-with-a-real-secret-key>")
+SECRET_KEY = settings.secret_key
+#os.environ.get("SECRET_KEY", "<replace-with-a-real-secret-key>")
 
 #defines our algorithm for signing the JWT(JSON-Web Tokens) Tokens. There are many algorithms
 #to choose from, we will be using HS256 (this is a common choice for symmetric signing)

@@ -17,8 +17,10 @@ from sqlalchemy.exc import IntegrityError
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import robots, missions, auth
+from app.config import settings
 
-FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN" , "http://localhost:5173")
+FRONTEND_ORIGIN = settings.frontend_origin
+#os.environ.get("FRONTEND_ORIGIN" , "http://localhost:5173")
 
 #set up the FastAPI application with a title, description, and version. 
 # This metadata is used in the automatically generated OpenAPI documentation.
