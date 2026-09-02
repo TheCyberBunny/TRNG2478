@@ -25,7 +25,7 @@ function Dashboard(){
           Fleet Overview
         </Typography>
         <Box sx={{ mb: 4}}>
-          <RobotDataGrid />
+          <RobotDataGrid onSuccess={setNotification}/>
         </Box>
         <Typography variant="h5" component="h2" gutterBottom>
           Co-Location Discrepancies
@@ -39,7 +39,9 @@ function Dashboard(){
         open={Boolean(notification)}
         autoHideDuration={4000}
         onClose={() => setNotification(null)}>
-          <Alert severity="success" onClose={() => setNotification(null)}></Alert>
+          <Alert severity="success" onClose={() => setNotification(null)}>
+            {notification}
+          </Alert>
         </Snackbar>
 
     </>
