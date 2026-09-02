@@ -1,5 +1,5 @@
 """
-RoboPulse Fleet Command Center
+RoboPulse Command Center
 Day 4 Answer Key - Pydantic v2 schema for the discrepancy report.
 
 Day 5 - Phase B Answer key added
@@ -31,3 +31,8 @@ class DiscrepancyRead(BaseModel):
 
     model_config = ConfigDict(from_attributes=True)
 
+class ReliabilityMetric(BaseModel):
+    model: str
+    total_missions: int
+    completed_count: int
+    failed_count: int

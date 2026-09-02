@@ -1,17 +1,17 @@
 """
-RoboPulse Fleet Command Center
+RoboPulse Command Center
 Day 4 Answer Key - Mission endpoints.
 
 Day 5 - Phase B challenge answer key
 """
 
 from fastapi import APIRouter, Depends, Query, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, case, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.dependencies import get_db, require_role
+from app.dependencies import get_current_user, get_db, require_role
 from app.models import Mission, MissionPriority, Operator, Robot, MissionStatus, User, UserRole
-from app.schemas.mission import DiscrepancyRead, MissionRead, MissionStatusUpdate
+from app.schemas.mission import DiscrepancyRead, MissionRead, MissionStatusUpdate, ReliabilityMetric
 
 router = APIRouter(prefix="/missions", tags=["missions"])
 
@@ -82,3 +82,29 @@ async def update_mission_status(
     await db.commit()
     await db.refresh(mission)
     return mission
+
+
+@router.get("/reliability", response_model=list[ReliabilityMetric])
+async def reliability_metrics(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(get_current_user),
+):
+    """
+    Business Question #3: Reliability Metrics.
+    Any authenticated role can view this - it's an analytics endpoint,
+    matching the problem statement's "Auditor can view analytics
+    dashboards" requirement, same as /missions/discrepancies.
+    """
+    statement = (
+        select(
+            Robot.model,
+            func.count(Mission.id).label("total_missions"),
+            func.sum(case((Mission.status == MissionStatus.COMPLETED, 1), else_=0)).label("completed_count"),
+            func.sum(case((Mission.status == MissionStatus.FAILED, 1), else_=0)).label("failed_count"),
+        )
+        .join(Mission, Mission.robot_id == Robot.id)
+        .group_by(Robot.model)
+        .order_by(Robot.model)
+    )
+    result = await db.execute(statement)
+    return [dict(row) for row in result.mappings().all()]
