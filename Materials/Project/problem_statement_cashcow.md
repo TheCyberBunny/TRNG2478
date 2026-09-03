@@ -52,7 +52,7 @@ The new system must allow operations admins and field technicians to easily answ
 ### Entity Specifications
 
 1. **Branches:** Physical sites housing ATM pools (`id`, `name`, `location_region`, `capacity`, `supervisor_id`).
-2. **ATMs:** Individual cash machine units (`id`, `serial_number`, `model`, `status`: *Operational* | *Low-Cash* | *Maintenance* | *Offline*, `cash_level`, `facility_id`).
+2. **ATMs:** Individual cash machine units (`id`, `serial_number`, `model`, `status`: *Operational* | *In-Transport* | *Maintenance* | *Offline*, `cash_level`, `facility_id`).
 3. **Service Calls:** Refill/repair tasks assigned to ATMs (`id`, `title`, `priority`: *Low* | *Medium* | *Critical*, `status`: *Pending* | *In-Progress* | *Completed* | *Failed*, `atm_id`, `technician_id`).
 4. **Diagnostic Reports:** Maintenance attachments and inspection files (`id`, `service_call_id`, `file_url`, `notes`, `created_at`).
 
